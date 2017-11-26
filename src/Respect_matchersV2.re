@@ -37,6 +37,12 @@ let expect = (actual) : expecter('a,'b) => {
   }
 };
 
+let create = (
+  ~f : 'a => Async.t(matchResult('b)),
+  ~desc: string) : matcher('a, 'b) => {
+  f, description: desc
+};
+
 let createPred = (~f : 'a => bool, ~desc : string) : matcher('a, 'a) => {
   f : (actual) => f(actual) ? matchSuccess(actual) : matchFailure(actual),
   description : desc
@@ -69,3 +75,11 @@ module Make(T : StrComparable) = {
     ~f=actual => T.compare(actual,exp) < 0,
     ~desc="greater than " ++ T.to_string(exp));
 };
+
+module AsyncMatchers = {
+  let resolve = create(
+    ~desc="resolve",
+    ~f=(actual:Async.t('a)) => ((cb:matchResult('a) => unit,_)) => actual |> Async.run(
+      (x:'a) => cb(MatchSuccess(x)),
+      ~fe=(x:'a) => cb(MatchFailure(x |> Obj.repr))))
+}
